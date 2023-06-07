@@ -7,7 +7,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LegacyApp.Consumer", "Legac
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LegacyApp", "LegacyApp\LegacyApp.csproj", "{C0E35137-EE80-4AC9-96E3-E927718A6FAB}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LegacyApp.Tests", "LegacyApp.Tests\LegacyApp.Tests.csproj", "{40FBAB7C-D94E-4C5F-903D-960430B77B11}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LegacyApp.Tests", "LegacyApp.Tests\LegacyApp.Tests.csproj", "{40FBAB7C-D94E-4C5F-903D-960430B77B11}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -30,5 +30,8 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {75F8AD6E-ABEA-4344-8843-DFCD04C14A0A}
 	EndGlobalSection
 EndGlobal

@@ -1,36 +1,29 @@
-﻿using LegacyApp.Abstraction;
-using System;
-
+﻿using System;
+using LegacyApp.Abstraction;
 
 namespace LegacyApp;
 
 public class UserService
 {
-    private const string ClientWithoutCreditLimit = "VeryImportantClient";
-
-    private readonly IUserValidationService _userValidationService;
-    private readonly IUserCreditLimitService _userCreditLimitService;
-    private readonly IClientRepository _clientRepository;
+    private readonly IUserCreditService _userCreditService;
     private readonly IUserDataAccessService _userDataAccessService;
+    private readonly IUserValidationService _userValidationService;
 
     public UserService()
     {
         _userValidationService = new UserValidationService();
-        _userCreditLimitService = new UserCreditLimitService();
-        _clientRepository = new ClientRepository();
+        _userCreditService = new UserCreditService();
         _userDataAccessService = new UserDataAccessService();
     }
 
     //Required for unit tests
-    //It is rather a code smell, and I would prefer to use DI, but since we can't change Program.cs...
-    public UserService(IUserValidationService userValidationService, 
-        IUserCreditLimitService userCreditLimitService,
-        IClientRepository clientRepository,
+    //In a real world this constructor would be used for DI
+    public UserService(IUserValidationService userValidationService,
+        IUserCreditService userCreditService,
         IUserDataAccessService userDataAccessService)
     {
         _userValidationService = userValidationService;
-        _userCreditLimitService = userCreditLimitService;
-        _clientRepository = clientRepository;
+        _userCreditService = userCreditService;
         _userDataAccessService = userDataAccessService;
     }
 
@@ -48,13 +41,8 @@ public class UserService
         {
             return false;
         }
-       
-        user.Client = _clientRepository.GetById(clientId);
-        
-        if (user.Client.Name != ClientWithoutCreditLimit)
-        {
-            _userCreditLimitService.UpdateCreditLimit(user);
-        }
+
+        _userCreditService.SetUserCreditLimit(user, clientId);
 
         if (!_userValidationService.IsValidCreditLimit(user))
         {
