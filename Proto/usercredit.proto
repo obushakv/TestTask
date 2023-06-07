@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+import "google/protobuf/timestamp.proto";
+
+service UserCreditGrpcService {
+  rpc GetCreditLimit(UserCreditRequest) returns (UserCreditResponse);
+}
+
+message UserCreditRequest {
+  string firstname = 1;
+  string surname = 2;
+  google.protobuf.Timestamp date_of_birth = 3;
+}
+
+message UserCreditResponse {
+  int32 credit_limit = 1;
+}

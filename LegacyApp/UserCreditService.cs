@@ -1,46 +1,50 @@
-﻿using System;
-using System.CodeDom.Compiler;
-using System.Diagnostics;
-using System.ServiceModel;
-using System.ServiceModel.Channels;
+﻿using System.Collections.Generic;
+using LegacyApp.Abstraction;
 
-namespace LegacyApp
+namespace LegacyApp;
+
+public class UserCreditService : IUserCreditService
 {
-    [GeneratedCode("System.ServiceModel", "4.0.0.0")]
-    [ServiceContract(ConfigurationName =  "LegacyApp.IUserCreditService")]
-    public interface IUserCreditService
+    public const string ClientWithoutCreditLimit = "VeryImportantClient";
+
+    private static readonly Dictionary<string, int> CustomCreditLimitMultipliers = new(1)
     {
-        [OperationContract(Action = "http://totally-real-service.com/IUserCreditService/GetCreditLimit")]
-        int GetCreditLimit(string firstname, string surname, DateTime dateOfBirth);
+        { "ImportantClient", 2 }
+    };
+
+    private readonly IClientRepository _clientRepository;
+
+    private readonly IUserCreditClient _userCreditClient;
+
+    public UserCreditService()
+    {
+        _userCreditClient = new UserCreditClient();
+        _clientRepository = new ClientRepository();
     }
 
-    [GeneratedCode("System.ServiceModel", "4.0.0.0")]
-    public interface IUserCreditServiceChannel : IUserCreditService, IClientChannel
+    public UserCreditService(IUserCreditClient userCreditClient, IClientRepository clientRepository)
     {
+        _userCreditClient = userCreditClient;
+        _clientRepository = clientRepository;
     }
-    
-    [DebuggerStepThrough]
-    [GeneratedCode("System.ServiceModel", "4.0.0.0")]
-    public partial class UserCreditServiceClient : ClientBase<IUserCreditService>, IUserCreditService
-    {
-        private IUserCreditServiceChannel _userCreditServiceChannelImplementation;
-        public UserCreditServiceClient() {}
-        
-        public UserCreditServiceClient(string endpointConfigurationName) : 
-            base(endpointConfigurationName)
-        {}
-        
-        public UserCreditServiceClient(string endpointConfigurationName, EndpointAddress remoteAddress) : 
-            base(endpointConfigurationName, remoteAddress)
-        {}
-        
-        public UserCreditServiceClient(Binding binding, EndpointAddress remoteAddress) : 
-            base(binding, remoteAddress)
-        {}
 
-        public int GetCreditLimit(string firstname, string surname, DateTime dateOfBirth)
+    public void SetUserCreditLimit(User user, int clientId)
+    {
+        var client = _clientRepository.GetById(clientId);
+
+        if (client.Name == ClientWithoutCreditLimit)
         {
-            return base.Channel.GetCreditLimit(firstname, surname, dateOfBirth);
+            return;
         }
+
+        user.HasCreditLimit = true;
+        var creditLimit = _userCreditClient.GetCreditLimit(user.Firstname, user.Surname, user.DateOfBirth);
+
+        if (CustomCreditLimitMultipliers.TryGetValue(client.Name, out var limitMultiplier))
+        {
+            creditLimit *= limitMultiplier;
+        }
+
+        user.CreditLimit = creditLimit;
     }
 }

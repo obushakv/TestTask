@@ -1,81 +1,56 @@
 ﻿using System;
+using LegacyApp.Abstraction;
 
-namespace LegacyApp
+namespace LegacyApp;
+
+public class UserService
 {
-    public class UserService
+    private readonly IUserCreditService _userCreditService;
+    private readonly IUserDataAccessService _userDataAccessService;
+    private readonly IUserValidationService _userValidationService;
+
+    public UserService()
     {
-        public bool AddUser(string firname, string surname, string email, DateTime dateOfBirth, int clientId)
+        _userValidationService = new UserValidationService();
+        _userCreditService = new UserCreditService();
+        _userDataAccessService = new UserDataAccessService();
+    }
+
+    //Required for unit tests
+    //In a real world this constructor would be used for DI
+    public UserService(IUserValidationService userValidationService,
+        IUserCreditService userCreditService,
+        IUserDataAccessService userDataAccessService)
+    {
+        _userValidationService = userValidationService;
+        _userCreditService = userCreditService;
+        _userDataAccessService = userDataAccessService;
+    }
+
+    public bool AddUser(string firstName, string surname, string email, DateTime dateOfBirth, int clientId)
+    {
+        var user = new User
         {
-            if (string.IsNullOrEmpty(firname) || string.IsNullOrEmpty(surname))
-            {
-                return false;
-            }
+            DateOfBirth = dateOfBirth,
+            EmailAddress = email,
+            Firstname = firstName,
+            Surname = surname
+        };
 
-            if (email.Contains("@") && !email.Contains("."))
-            {
-                return false;
-            }
-
-            var now = DateTime.Now;
-            int age = now.Year - dateOfBirth.Year;
-
-            if (now.Month < dateOfBirth.Month || (now.Month == dateOfBirth.Month && now.Day < dateOfBirth.Day))
-            {
-                age--;
-            }
-
-            if (age < 21)
-            {
-                return false;
-            }
-
-            var clientRepository = new ClientRepository();
-            var client = clientRepository.GetById(clientId);
-
-            var user = new User
-            {
-                Client = client,
-                DateOfBirth = dateOfBirth,
-                EmailAddress = email,
-                Firstname = firname,
-                Surname = surname
-            };
-
-            if (client.Name == "VeryImportantClient")
-            {
-                // Skip credit chek
-                user.HasCreditLimit = false;
-            }
-            else if (client.Name == "ImportantClient")
-            {
-                // Do credit check and double credit limit
-                user.HasCreditLimit = true;
-                using (var userCreditService = new UserCreditServiceClient())
-                {
-                    var creditLimit = userCreditService.GetCreditLimit(user.Firstname, user.Surname, user.DateOfBirth);
-                    creditLimit = creditLimit * 2;
-                    user.CreditLimit = creditLimit;
-                }
-            }
-            else
-            {
-                // Do credit check
-                user.HasCreditLimit = true;
-                using (var userCreditService = new UserCreditServiceClient())
-                {
-                    var creditLimit = userCreditService.GetCreditLimit(user.Firstname, user.Surname, user.DateOfBirth);
-                    user.CreditLimit = creditLimit;
-                }
-            }
-
-            if (user.HasCreditLimit && user.CreditLimit < 500)
-            {
-                return false;
-            }
-            
-            UserDataAccess.AddUser(user);
-
-            return true;
+        if (!_userValidationService.IsValidUser(user))
+        {
+            return false;
         }
+
+        _userCreditService.SetUserCreditLimit(user, clientId);
+
+        if (!_userValidationService.IsValidCreditLimit(user))
+        {
+            return false;
+        }
+
+        _userDataAccessService.AddUser(user);
+
+        return true;
     }
 }
