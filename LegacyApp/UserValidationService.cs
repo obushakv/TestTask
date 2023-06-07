@@ -1,14 +1,15 @@
 ﻿using System;
 using System.Text.RegularExpressions;
+using LegacyApp.Abstraction;
 
 namespace LegacyApp;
 
-public class UserValidationService
+public class UserValidationService : IUserValidationService
 {
     private const int MinUserAge = 21;
     private const int MinAllowedCreditLimit = 500;
 
-    internal bool IsValidUser(User user)
+    public bool IsValidUser(User user)
     {
         return user != null
                && IsValidName(user.Firstname, user.Surname)
@@ -16,7 +17,7 @@ public class UserValidationService
                && IsAppropriateAge(user.DateOfBirth);
     }
 
-    internal bool IsValidCreditLimit(User user)
+    public bool IsValidCreditLimit(User user)
     {
         return !user.HasCreditLimit || user.CreditLimit >= MinAllowedCreditLimit;
     }
