@@ -1,74 +1,57 @@
 ﻿using System;
 
+
 namespace LegacyApp;
 
 public class UserService
 {
-    public bool AddUser(string firname, string surname, string email, DateTime dateOfBirth, int clientId)
+    private const string ClientWithoutCreditLimit = "VeryImportantClient";
+
+    private readonly UserValidationService _userValidationService;
+    private readonly UserCreditLimitService _userCreditLimitService;
+    private readonly ClientRepository _clientRepository;
+    
+    public UserService()
     {
-        if (string.IsNullOrEmpty(firname) || string.IsNullOrEmpty(surname))
-        {
-            return false;
-        }
+        _userValidationService = new UserValidationService();
+        _userCreditLimitService = new UserCreditLimitService();
+        _clientRepository = new ClientRepository();
+    }
 
-        if (email.Contains("@") && !email.Contains("."))
-        {
-            return false;
-        }
+    //Required for unit tests
+    //It is rather a code smell, and I would prefer to use DI, but since we can't change Program.cs...
+    public UserService(UserValidationService userValidationService, 
+        UserCreditLimitService userCreditLimitService,
+        ClientRepository clientRepository)
+    {
+        _userValidationService = userValidationService;
+        _userCreditLimitService = userCreditLimitService;
+        _clientRepository = clientRepository;
+    }
 
-        var now = DateTime.Now;
-        int age = now.Year - dateOfBirth.Year;
-
-        if (now.Month < dateOfBirth.Month || (now.Month == dateOfBirth.Month && now.Day < dateOfBirth.Day))
-        {
-            age--;
-        }
-
-        if (age < 21)
-        {
-            return false;
-        }
-
-        var clientRepository = new ClientRepository();
-        var client = clientRepository.GetById(clientId);
-
+    public bool AddUser(string firstName, string surname, string email, DateTime dateOfBirth, int clientId)
+    {
         var user = new User
         {
-            Client = client,
             DateOfBirth = dateOfBirth,
             EmailAddress = email,
-            Firstname = firname,
+            Firstname = firstName,
             Surname = surname
         };
 
-        if (client.Name == "VeryImportantClient")
+        if (!_userValidationService.IsValidUser(user))
         {
-            // Skip credit chek
-            user.HasCreditLimit = false;
+            return false;
         }
-        else if (client.Name == "ImportantClient")
+       
+        user.Client = _clientRepository.GetById(clientId);
+        
+        if (user.Client.Name != ClientWithoutCreditLimit)
         {
-            // Do credit check and double credit limit
-            user.HasCreditLimit = true;
-            using (var userCreditService = new UserCreditServiceClient())
-            {
-                var creditLimit = userCreditService.GetCreditLimit(user.Firstname, user.Surname, user.DateOfBirth);
-                creditLimit = creditLimit * 2;
-                user.CreditLimit = creditLimit;
-            }
-        }
-        else
-        {
-            // Do credit check
-            user.HasCreditLimit = true;
-            using (var userCreditService = new UserCreditServiceClient())
-            {
-                var creditLimit = userCreditService.GetCreditLimit(user.Firstname, user.Surname, user.DateOfBirth);
-                user.CreditLimit = creditLimit;
-            }
+            _userCreditLimitService.UpdateCreditLimit(user);
         }
 
-        if (user.HasCreditLimit && user.CreditLimit < 500)
+        if (!_userValidationService.IsValidCreditLimit(user))
         {
             return false;
         }
